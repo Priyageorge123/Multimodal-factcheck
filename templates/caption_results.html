@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Caption Search Results</title>
+</head>
+<body>
+    <h2>Results for Caption: "{{ query }}"</h2>
+
+    {% for result in results %}
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 20px;">
+            <h4>{{ result.title }}</h4>
+            <a href="{{ result.page_link }}" target="_blank">
+                <img src="{{ result.image_url }}" alt="Search Result" width="250">
+            </a>
+            <p><strong>Snippet:</strong> {{ result.snippet }}</p>
+            <p><strong>Source:</strong> {{ result.domain }}</p>
+        </div>
+    {% endfor %}
+
+    <br>
+    <a href="/search_by_caption">← Try another caption</a> |
+    <a href="/">← Back to Image Analyzer</a>
+</body>
+</html>

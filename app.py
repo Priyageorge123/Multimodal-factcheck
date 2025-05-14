@@ -1,0 +1,108 @@
+import os
+import argparse
+import requests
+from flask import Flask, render_template, request
+from bs4 import BeautifulSoup
+from google.cloud import vision
+
+app = Flask(__name__)
+
+cse_id = None
+api_key = None
+
+def analyze_image(image_url):
+    client = vision.ImageAnnotatorClient()
+    response = requests.get(image_url,timeout=60)
+    response.raise_for_status()
+    image = vision.Image(content=response.content)
+    response = client.web_detection(image=image)
+    annotations = response.web_detection
+
+    results = {"entities": [], "similar_images": [], "pages": []}
+    if annotations.web_entities:
+        results["entities"] = [
+            {"description": e.description, "score": e.score}
+            for e in annotations.web_entities if e.description
+        ]
+    if annotations.visually_similar_images:
+        results["similar_images"] = [img.url for img in annotations.visually_similar_images]
+    if annotations.pages_with_matching_images:
+        results["pages"] = [page.url for page in annotations.pages_with_matching_images]
+    return results
+
+def extract_page_text(url):
+    try:
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+        soup = BeautifulSoup(response.text, "html.parser")
+        paragraphs = soup.find_all("p")
+        return "\n\n".join(p.get_text(strip=True) for p in paragraphs)
+    except Exception as e:
+        return f"[Error extracting text: {e}]"
+
+def store_image_urls(image_urls, file_path="similar_images.txt"):
+    with open(file_path, "a", encoding="utf-8") as file:
+        for url in image_urls:
+            file.write(url + "\n")
+
+def search_caption(caption):
+    search_url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        "q": caption,
+        "cx": cse_id,
+        "key": api_key,
+        "searchType": "image",
+        "num": 5
+    }
+    response = requests.get(search_url, params=params)
+    data = response.json()
+
+    results = []
+    for item in data.get("items", []):
+        results.append({
+            "title": item.get("title"),
+            "domain":item.get("displayLink"),
+            "link": item.get("link"),
+            "image": item.get("image", {}).get("thumbnailLink")
+        })
+    return results
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        image_url = request.form.get("image_url")
+        caption = request.form.get("caption")
+
+        if image_url:
+            try:
+                results = analyze_image(image_url)
+                page_texts = [extract_page_text(url) for url in results.get("pages", [])]
+                store_image_urls(results["similar_images"])
+                return render_template("result.html",
+                                       image_url=image_url,
+                                       entities=results["entities"],
+                                       similar_images=results["similar_images"],
+                                       page_texts=page_texts)                
+            except Exception as e:
+                return f"<h2>Error: {e}</h2>"
+
+        elif caption:
+            try:
+                search_results = search_caption(caption)
+                return render_template("result.html", caption=caption, search_results=search_results)
+            except Exception as e:
+                return f"<h2>Error: {e}</h2>"
+
+    return render_template("index.html")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cse_id", required=True, help="Google Custom Search Engine ID")
+    parser.add_argument("--api_key", required=True, help="Google API Key")
+    args = parser.parse_args()
+
+    cse_id = args.cse_id
+    api_key = args.api_key
+
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/priya/IML_Task/polished-vault-455713-q8-199191d8dfb6.json"
+
+    app.run(debug=True)
