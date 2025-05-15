@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Search Results</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -55,9 +54,10 @@
     </style>
 </head>
 <body>
-    <h1>Search Results</h1>
-
     {% if entities %}
+    <h2>Searched Image</h2>
+    <img src="{{image_url}}">
+    <h2>Search Results</h2>
     <div class="section">
         <h2>Identified Entities</h2>
         <ul>
@@ -68,39 +68,62 @@
     </div>
     {% endif %}
 
-    {% if similar_images %}
+    {% if matching_images %}
+    <div class="section">
+        <h2>Matching Images</h2>
+        <div class="image-grid">
+            {% for sim_url in matching_images %}
+            <a href="{{ sim_url }}" target="_blank">
+                <img src="{{ sim_url }}" alt="Matching Image">
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if visually_similar_images%}
     <div class="section">
         <h2>Visually Similar Images</h2>
         <div class="image-grid">
-            {% for sim_url in similar_images %}
-            <a href="{{ sim_url }}" target="_blank">
-                <img src="{{ sim_url }}" alt="Similar Image">
+            {%for image in visually_similar_images %}
+            <a href="{{image}}" target="_blank">
+                <img src="{{image}}" alt="Visually Similar Image">
             </a>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    {% if page_texts %}
+    {% if pages %}
     <div class="section">
         <h2>Extracted Text from Matching Pages</h2>
-        {% for text in page_texts %}
-        <p>{{ text }}</p>
+        {% for page in pages %}
+        <a href="{{page.url}}">{{page.url}}</a>
+        <p>{{ page.text }}</p>
         <hr>
         {% endfor %}
     </div>
     {% endif %}
 
     {% if search_results %}
+    <h2>Searched caption</h2>
+    <p>{{caption}}</p>
+    <h2>Search Results</h2>
     <div class="section">
         {% for result in search_results %}
         <div class="result-entry">
-            <p><a href="{{ result.link }}" target="_blank">{{ result.title }}</a></p>
+            <a href="{{ result.link }}" target="_blank">
             {% if result.image %}
                 <img src="{{ result.image }}" alt="Result Image">
             {% endif %}
-            {% if result.domain %}
-                <p class="source-link">Source: <a href="{{ result.domain }}" target="_blank">{{ result.domain }}</a></p>
+            </a>
+            {% if result.page_url %}
+                <p class="source-link">Source: <a href="{{ result.page_url }}" target="_blank">{{ result.page_url }}</a></p>
+            {% endif %}
+            {% if result.snippet%}
+            <p class="source-link">Title:{{result.snippet}}</p>
+            {% endif %}
+            {% if result.text %}
+            <p class="source-link">{{result.text}}</p>
             {% endif %}
         </div>
         <hr>

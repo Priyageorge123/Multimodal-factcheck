@@ -18,16 +18,23 @@ def analyze_image(image_url):
     response = client.web_detection(image=image)
     annotations = response.web_detection
 
-    results = {"entities": [], "similar_images": [], "pages": []}
+    results = {"entities": [], "matching_images": [], "visually_similar_images":[],"pages": []}
     if annotations.web_entities:
         results["entities"] = [
             {"description": e.description, "score": e.score}
             for e in annotations.web_entities if e.description
         ]
     if annotations.visually_similar_images:
-        results["similar_images"] = [img.url for img in annotations.visually_similar_images]
+        results["visually_similar_images"] = [img.url for img in annotations.visually_similar_images]
     if annotations.pages_with_matching_images:
         results["pages"] = [page.url for page in annotations.pages_with_matching_images]
+        for page in annotations.pages_with_matching_images:
+            if page.full_matching_images:
+                results["matching_images"]=[img.url for img in page.full_matching_images]
+            if page.partial_matching_images:
+                for image in page.partial_matching_images:
+                    results["matching_images"].append(image.url)
+    
     return results
 
 def extract_page_text(url):
@@ -59,13 +66,12 @@ def search_caption(caption):
     results = []
     for item in data.get("items", []):
         results.append({
-            "title": item.get("title"),
-            "domain":item.get("displayLink"),
+            "snippet": item.get("snippet"),
+            "page_url":item.get("image").get("contextLink"),
             "link": item.get("link"),
             "image": item.get("image", {}).get("thumbnailLink")
         })
     return results
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -75,19 +81,22 @@ def index():
         if image_url:
             try:
                 results = analyze_image(image_url)
-                page_texts = [extract_page_text(url) for url in results.get("pages", [])]
-                store_image_urls(results["similar_images"])
+                pages = [{"url":url,"text":extract_page_text(url)} for url in results.get("pages", [])]
+                store_image_urls(results["matching_images"])
                 return render_template("result.html",
                                        image_url=image_url,
                                        entities=results["entities"],
-                                       similar_images=results["similar_images"],
-                                       page_texts=page_texts)                
+                                       matching_images=results["matching_images"],
+                                       visually_similar_images=results["visually_similar_images"],
+                                       pages=pages)               
             except Exception as e:
                 return f"<h2>Error: {e}</h2>"
 
         elif caption:
             try:
                 search_results = search_caption(caption)
+                for result in search_results:
+                    result["text"]=extract_page_text(result.get("page_url",""))
                 return render_template("result.html", caption=caption, search_results=search_results)
             except Exception as e:
                 return f"<h2>Error: {e}</h2>"
