@@ -80,9 +80,9 @@ def index():
 
         if image_url:
             try:
+
                 results = analyze_image(image_url)
                 pages = [{"url":url,"text":extract_page_text(url)} for url in results.get("pages", [])]
-                store_image_urls(results["matching_images"])
                 return render_template("result.html",
                                        image_url=image_url,
                                        entities=results["entities"],
