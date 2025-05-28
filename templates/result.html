@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+        }
+        .section {
+            margin-bottom: 2rem;
+        }
+        img {
+            max-width: 300px;
+            height: auto;
+            margin: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .back-button {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.5rem 1rem;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+        .image-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .result-entry {
+            margin-bottom: 2rem;
+        }
+        .source-link {
+            font-size: 0.9rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    {% if entities %}
+    <h2>Searched Image</h2>
+    {%if image_url%}
+    <img src="{{image_url}}">
+    {% endif %}
+    {%if filename%}
+    <img src="{{url_for('uploaded_file',filename=filename)}}">
+    {% endif %}
+    
+    <h2>Search Results</h2>
+    <div class="section">
+        <h2>Identified Entities</h2>
+        <ul>
+            {% for entity in entities %}
+            <li>{{ entity.description }} (Score: {{ entity.score }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if matching_images %}
+    <div class="section">
+        <h2>Matching Images</h2>
+        <div class="image-grid">
+            {% for sim_url in matching_images %}
+            <a href="{{ sim_url }}" target="_blank">
+                <img src="{{ sim_url }}" alt="Matching Image">
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if visually_similar_images%}
+    <div class="section">
+        <h2>Visually Similar Images</h2>
+        <div class="image-grid">
+            {%for image in visually_similar_images %}
+            <a href="{{image}}" target="_blank">
+                <img src="{{image}}" alt="Visually Similar Image">
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if pages %}
+    <div class="section">
+        <h2>Extracted Text from Matching Pages</h2>
+        {% for page in pages %}
+        <a href="{{page.url}}">{{page.url}}</a>
+        <p>{{ page.text }}</p>
+        <hr>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if search_results %}
+    <h2>Searched caption</h2>
+    <p>{{caption}}</p>
+    <h2>Search Results</h2>
+    <div class="section">
+        {% for result in search_results %}
+        <div class="result-entry">
+            <a href="{{ result.link }}" target="_blank">
+            {% if result.image %}
+                <img src="{{ result.image }}" alt="Result Image">
+            {% endif %}
+            </a>
+            {% if result.page_url %}
+                <p class="source-link">Source: <a href="{{ result.page_url }}" target="_blank">{{ result.page_url }}</a></p>
+            {% endif %}
+            {% if result.snippet%}
+            <p class="source-link">Title:{{result.snippet}}</p>
+            {% endif %}
+            {% if result.text %}
+            <p class="source-link">{{result.text}}</p>
+            {% endif %}
+        </div>
+        <hr>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <a class="back-button" href="/">← Back to Home</a>
+</body>
+</html>
