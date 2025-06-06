@@ -1,10 +1,12 @@
 import os
 import argparse
 import requests
+import spacy
 from flask import Flask, render_template, request, send_from_directory
 from bs4 import BeautifulSoup
 from google.cloud import vision
 from werkzeug.utils import secure_filename
+from spacy import displacy
 
 
 UPLOAD_FOLDER="C:/Users/priya/IML_Task/uploads"
@@ -40,7 +42,7 @@ def analyze_image(image_url=False,path=False):
         results["pages"] = [page.url for page in annotations.pages_with_matching_images]
         for page in annotations.pages_with_matching_images:
             if page.full_matching_images:
-                results["matching_images"]=[img.url for img in page.full_matching_images]
+                results["matching_images"].extend([img.url for img in page.full_matching_images])
             if page.partial_matching_images:
                 for image in page.partial_matching_images:
                     results["matching_images"].append(image.url)
@@ -90,13 +92,39 @@ def uploaded_file(filename):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    image_url = None
+    image_file = None
+    caption = None
     if request.method == "POST":
-        image_file=request.files['file']
-        image_url = request.form.get("image_url")
-        caption = request.form.get("caption")
+        submit_type=request.form.get("submit_type")
+        if submit_type=="Search Image":
+            image_file=request.files['file']
+            image_url = request.form.get("image_url")
+        elif submit_type=="Search Caption":
+            caption = request.form.get("caption")
         
         filename = None
         path = None
+        colors = {
+                            "PERSON": "#a6e22d",      
+                            "ORG": "#ff7f0e",          
+                            "LOC": "#1f77b4",         
+                            "FAC": "#d62728",        
+                            "PRODUCT": "#9467bd",     
+                            "EVENT": "#bcbd22",     
+                            "WORK_OF_ART": "#17becf",  
+                            "LAW": "#8c564b",        
+                            "LANGUAGE": "#e377c2",     
+                            "DATE": "#2ca02c",        
+                            "TIME": "#1c9099",   
+                            "PERCENT": "#7f7f7f",      
+                            "MONEY": "#ff1493",       
+                            "QUANTITY": "#aec7e8",  
+                            "ORDINAL": "#ffbb78",     
+                            "CARDINAL": "#98df8a",    
+                            "NORP": "#c49c94"         
+                        }
+        options={"colors":colors}
 
         if image_url or image_file:
             try:
@@ -111,7 +139,15 @@ def index():
                     results = analyze_image(image_url=image_url)
 
                 pages = [{"url":url,"text":extract_page_text(url)} for url in results.get("pages", [])]
-                
+                nlp=spacy.load("en_core_web_sm")
+
+                for page in pages:
+                    doc = nlp(page["text"])
+                    entity_labels = set(ent.label_ for ent in doc.ents)
+                    page["colors"] = {label: colors.get(label, "#ddd") for label in entity_labels}
+                    # Render HTML for NER and dependency parsing
+                    page["ner_html"] = displacy.render(doc, style="ent",options=options, page=True)
+                    page["dep_html"] = displacy.render(doc, style="dep", page=True)
                 return render_template("result.html",
                                        image_url=image_url,
                                        path=path,
@@ -119,15 +155,22 @@ def index():
                                        entities=results["entities"],
                                        matching_images=results["matching_images"],
                                        visually_similar_images=results["visually_similar_images"],
-                                       pages=pages)               
+                                       pages=pages
+                                       )               
             except Exception as e:
                 return f"<h2>Error: {e}</h2>"
 
         elif caption:
             try:
                 search_results = search_caption(caption)
+                nlp=spacy.load("en_core_web_sm")
                 for result in search_results:
                     result["text"]=extract_page_text(result.get("page_url",""))
+                    doc=nlp(result["text"])
+                    entity_labels = set(ent.label_ for ent in doc.ents)
+                    result["colors"] = {label: colors.get(label, "#ddd") for label in entity_labels}
+                    result["rendered_ner"]=displacy.render(doc,style="ent",options=options,page=False)
+                    result["rendered_dep"]=displacy.render(doc,style="dep",page=False)
                 return render_template("result.html", caption=caption, search_results=search_results)
             except Exception as e:
                 return f"<h2>Error: {e}</h2>"

@@ -99,13 +99,29 @@
     </div>
     {% endif %}
 
-    {% if pages %}
+   {% if pages %}
     <div class="section">
-        <h2>Extracted Text from Matching Pages</h2>
+        <h2>Extracted Text and Visualizations</h2>
         {% for page in pages %}
-        <a href="{{page.url}}">{{page.url}}</a>
-        <p>{{ page.text }}</p>
-        <hr>
+            <p><a href="{{ page.url }}" target="_blank">{{ page.url }}</a></p>
+            <ul style="list-style: none;">
+            {% for label, color in page.colors.items() %}
+                <li style="display: inline-block; margin-right: 15px;margin-bottom: 15px;">
+                <span style="background-color: {{ color }}; padding: 5px 10px; border-radius: 4px;">{{ label }}</span>
+                </li>
+            {% endfor %}
+            </ul>
+
+            <h3>Named Entity Recognition</h3>
+            <div>{{ page.ner_html | safe }}</div>
+
+            <h3>Dependency Parsing</h3>
+            <div style="overflow-x: auto;">
+                {{ page.dep_html | safe }}
+            </div>
+
+
+            <hr>
         {% endfor %}
     </div>
     {% endif %}
@@ -125,12 +141,21 @@
             {% if result.page_url %}
                 <p class="source-link">Source: <a href="{{ result.page_url }}" target="_blank">{{ result.page_url }}</a></p>
             {% endif %}
+            <ul style="list-style: none;">
+            {% for label, color in result.colors.items() %}
+                <li style="display: inline-block; margin-right: 15px;margin-bottom: 15px;">
+                <span style="background-color: {{ color }}; padding: 5px 10px; border-radius: 4px;">{{ label }}</span>
+                </li>
+            {% endfor %}
+            </ul>
+            <h2>Extracted Text and Visualizations</h2>
             {% if result.snippet%}
             <p class="source-link">Title:{{result.snippet}}</p>
             {% endif %}
-            {% if result.text %}
-            <p class="source-link">{{result.text}}</p>
-            {% endif %}
+            <div>{{ result.rendered_ner | safe }}</div>
+            <div style="overflow-x: auto;">
+                {{ result.rendered_dep | safe }}
+            </div>
         </div>
         <hr>
         {% endfor %}
