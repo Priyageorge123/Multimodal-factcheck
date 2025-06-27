@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ article_id }}</title>
+    <style>
+        .tag {
+            display: inline-block;
+            margin: 4px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .toggle-container {
+            margin-top: 20px;
+        }
+
+        .toggle-btn {
+            padding: 8px 16px;
+            margin-right: 10px;
+            cursor: pointer;
+            border: none;
+            background-color: #ddd;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .toggle-btn.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .section {
+            margin-top: 20px;
+        }
+    </style>
+
+    <script>
+        function toggleSection(buttonId, sectionId) {
+            const section = document.getElementById(sectionId);
+            const button = document.getElementById(buttonId);
+            const isVisible = section.style.display === 'block';
+
+            section.style.display = isVisible ? 'none' : 'block';
+            button.classList.toggle('active', !isVisible);
+        }
+    </script>
+</head>
+
+<body>
+    <h1>Article: {{ article_id }}</h1>
+
+    <!-- Toggle Buttons -->
+    <div class="toggle-container">
+        <button id="nerBtn" class="toggle-btn active" onclick="toggleSection('nerBtn', 'ner')">NER</button>
+        <button id="depBtn" class="toggle-btn" onclick="toggleSection('depBtn', 'dep')">Dependency Parsing</button>
+        <button id="eventBtn" class="toggle-btn" onclick="toggleSection('eventBtn','events')">Events</button>
+    </div>
+
+
+    <!-- NER Visualization -->
+    <div id="ner" class="section" style="display: block;">
+            <!-- Entity Types Displayed -->
+    <div class="section">
+        {% for label in entity_map %}
+            <span class="tag" style="background-color: {{ color_map[label] }}">{{ label }}</span>
+        {% endfor %}
+    </div>
+        {{ ner_html|safe }}
+    </div>
+    <div id="events" style="display: none; margin-top: 20px;;">
+        {% for event_type, occurrences in events.items() %}
+        <div style="margin-bottom: 20px; padding: 10px;max-width: 500px; border: 10px solid {{ event_type_colors.get(event_type, '#ccc') }};">
+            <strong>Event Type:</strong> {{ event_type }}
+            <table border="1" cellpadding="6" cellspacing="0" style="margin-top: 10px; border-collapse: collapse;">
+                <tr>
+                    <th>Sentence ID</th>
+                    <th>Trigger</th>
+                    <th>Arguments</th>
+                </tr>
+                {% for e in occurrences %}
+                <tr>
+                    <td>{{ e.sentence_id }}</td>
+                    <td>{{ e.trigger }}</td>
+                    <td>
+                        {% for arg in e.arguments %}
+                            <strong>{{ arg.role }}</strong>: {{ arg.text }}<br>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+        <div>
+            {% for label in event_map %}
+                <span class="tag" style="background-color: {{ color_map['EVENT'] }}">{{ label }}</span>
+            {% endfor %}
+        </div>
+        <div>{{ event_html|safe }}</div>
+    </div>
+
+    <!-- Dependency Parsing Visualization -->
+    <div id="dep" style="display: none;">
+        {% for dep, labels in zipped_deps %}
+            <div style="margin-bottom: 30px;">
+                <div style="margin-bottom: 5px;">
+                    {% for label in labels %}
+                        <span class="tag" style="background-color: #ddd; color: black;">{{ label }}</span>
+                    {% endfor %}
+                </div>
+                <div style="margin-bottom: 30px;">{{ dep|safe }}</div>
+            </div>
+        {% endfor %}
+    </div>
+    <div id="events" style="display: none;">
+        <h3>Event Types Found:</h3>
+        {% if event_types %}
+            <ul>
+            {% for event in event_types %}
+                <li>{{ event }}</li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No event types found in this article.</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>
