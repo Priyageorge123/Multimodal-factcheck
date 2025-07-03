@@ -34,6 +34,23 @@
         .section {
             margin-top: 20px;
         }
+
+        .event-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .event-toggle {
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .event-details {
+            display: none;
+            margin-top: 10px;
+        }
     </style>
 
     <script>
@@ -41,9 +58,13 @@
             const section = document.getElementById(sectionId);
             const button = document.getElementById(buttonId);
             const isVisible = section.style.display === 'block';
-
             section.style.display = isVisible ? 'none' : 'block';
             button.classList.toggle('active', !isVisible);
+        }
+
+        function toggleEventType(id) {
+            const details = document.getElementById(id);
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
         }
     </script>
 </head>
@@ -58,42 +79,52 @@
         <button id="eventBtn" class="toggle-btn" onclick="toggleSection('eventBtn','events')">Events</button>
     </div>
 
-
-    <!-- NER Visualization -->
+    <!-- NER Section -->
     <div id="ner" class="section" style="display: block;">
-            <!-- Entity Types Displayed -->
-    <div class="section">
-        {% for label in entity_map %}
-            <span class="tag" style="background-color: {{ color_map[label] }}">{{ label }}</span>
-        {% endfor %}
-    </div>
+        <div class="section">
+            {% for label in entity_map %}
+                <span class="tag" style="background-color: {{ color_map[label] }}">{{ label }}</span>
+            {% endfor %}
+        </div>
         {{ ner_html|safe }}
     </div>
-    <div id="events" style="display: none; margin-top: 20px;;">
-        {% for event_type, occurrences in events.items() %}
-        <div style="margin-bottom: 20px; padding: 10px;max-width: 500px; border: 10px solid {{ event_type_colors.get(event_type, '#ccc') }};">
-            <strong>Event Type:</strong> {{ event_type }}
-            <table border="1" cellpadding="6" cellspacing="0" style="margin-top: 10px; border-collapse: collapse;">
-                <tr>
-                    <th>Sentence ID</th>
-                    <th>Trigger</th>
-                    <th>Arguments</th>
-                </tr>
-                {% for e in occurrences %}
-                <tr>
-                    <td>{{ e.sentence_id }}</td>
-                    <td>{{ e.trigger }}</td>
-                    <td>
-                        {% for arg in e.arguments %}
-                            <strong>{{ arg.role }}</strong>: {{ arg.text }}<br>
+
+    <!-- Events Section -->
+    <div id="events" class="section" style="display: none;">
+        <div class="event-section" style="border: 2px solid #aaa;">
+            <h3>Event Types</h3>
+            {% for event_type, occurrences in events.items() %}
+                <div class="event-toggle" 
+                    onclick="toggleEventType('event_{{ loop.index }}')" 
+                    style="padding-left: 10px; cursor: pointer;">
+                    <strong style="color: {{ event_type_colors.get(event_type, '#000') }}">
+                         {{ event_type }}
+                    </strong>
+                </div>
+                <div id="event_{{ loop.index }}" class="event-details">
+                    <table border="1" cellpadding="6" cellspacing="0" style="margin-top: 10px; border-collapse: collapse; width: 100%;">
+                        <tr>
+                            <th>Sentence ID</th>
+                            <th>Trigger</th>
+                            <th>Arguments</th>
+                        </tr>
+                        {% for e in occurrences %}
+                        <tr>
+                            <td>{{ e.sentence_id }}</td>
+                            <td>{{ e.trigger }}</td>
+                            <td>
+                                {% for arg in e.arguments %}
+                                    <strong>{{ arg.role }}</strong>: {{ arg.text }}<br>
+                                {% endfor %}
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
+                    </table>
+                </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-        <div>
+    
+        <div style="margin-top: 20px;">
             {% for label in event_map %}
                 <span class="tag" style="background-color: {{ color_map['EVENT'] }}">{{ label }}</span>
             {% endfor %}
@@ -101,7 +132,7 @@
         <div>{{ event_html|safe }}</div>
     </div>
 
-    <!-- Dependency Parsing Visualization -->
+    <!-- Dependency Parsing Section -->
     <div id="dep" style="display: none;">
         {% for dep, labels in zipped_deps %}
             <div style="margin-bottom: 30px;">
@@ -114,18 +145,5 @@
             </div>
         {% endfor %}
     </div>
-    <div id="events" style="display: none;">
-        <h3>Event Types Found:</h3>
-        {% if event_types %}
-            <ul>
-            {% for event in event_types %}
-                <li>{{ event }}</li>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <p>No event types found in this article.</p>
-        {% endif %}
-    </div>
-
 </body>
 </html>
