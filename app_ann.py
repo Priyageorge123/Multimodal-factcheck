@@ -32,7 +32,8 @@ def extract_events(sentences):
     event_map = defaultdict(list)
 
     for sent in sentences:
-        sentence_id = sent.get("sentence_id", "")
+        full_id = sent.get("sentence_id", "")
+        sentence_id = full_id.split("_")[-1] if full_id else ""
 
         for event in sent.get("golden-event-mentions", []):
             event_type = event.get("event_type")
