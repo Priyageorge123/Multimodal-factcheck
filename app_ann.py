@@ -28,7 +28,9 @@ EVENT_TYPE_COLORS = {
 }
 
 
-def extract_events(sentences):
+def extract_events(sentences, event_schema):
+    from collections import defaultdict
+
     event_map = defaultdict(list)
 
     for sent in sentences:
@@ -38,12 +40,25 @@ def extract_events(sentences):
         for event in sent.get("golden-event-mentions", []):
             event_type = event.get("event_type")
             trigger = event.get("trigger", {}).get("text")
-            arguments = [{"role": arg["role"], "text": arg["text"]} for arg in event.get("arguments", [])]
+
+            # Map actual roles from this sentence
+            found_roles = {arg["role"]: arg["text"] for arg in event.get("arguments", [])}
+
+            # Get expected roles from the schema
+            expected_roles = event_schema.get(event_type, {}).get("roles", [])
+
+            # Fill all expected roles, use "None" if not found
+            role_details = []
+            for role in expected_roles:
+                role_details.append({
+                    "role": role,
+                    "text": found_roles.get(role, "None")
+                })
 
             event_map[event_type].append({
                 "sentence_id": sentence_id,
                 "trigger": trigger,
-                "arguments": arguments
+                "arguments": role_details
             })
 
     return event_map
@@ -109,12 +124,14 @@ def view_article():
 
     with open("text_only_event.json", encoding="utf-8") as f:
         data = json.load(f)
+    with open("event_schema.json", encoding="utf-8") as f:
+        event_schema = json.load(f)
 
     relevant = [d for d in data if d.get("sentence_id", "").startswith(article_id)]
     if not relevant:
         return "Article ID not found", 404
     
-    events = extract_events(relevant)
+    events = extract_events(relevant,event_schema)
 
     ner_doc, event_doc, dep_docs, entity_map, dep_labels_all, event_types = create_docs(relevant)
 
