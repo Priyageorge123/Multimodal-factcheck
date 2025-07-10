@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
+import os
+from werkzeug.utils import secure_filename
 import json
 import spacy
 from spacy.tokens import Doc, Span
@@ -8,6 +10,13 @@ from collections import defaultdict
 app = Flask(__name__)
 nlp = spacy.load("en_core_web_sm")  
 
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'txt'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Ensure upload folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 COLORS = {
     "PER": "#a6e22d", "ORG": "#ff7f0e", "LOC": "#1f77b4", "FAC": "#d62728","GPE":"#FFFF00",
@@ -116,7 +125,29 @@ def create_docs(sentences):
     return ner_doc, event_doc, dep_docs, entity_map, dep_labels_all, event_types
 
 
-@app.route("/")
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/", methods=["GET", "POST"])
+def upload_file():
+    if request.method == "POST":
+        if 'file' not in request.files:
+            return "No file part", 400
+        file = request.files['file']
+        if file.filename == '':
+            return "No selected file", 400
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+
+            # Extract article_id from filename
+            article_id = '.'.join(filename.split('.')[:4])
+            return redirect(url_for('view_article', article_id=article_id))
+
+    return render_template("upload.html")
+
+@app.route("/view")
 def view_article():
     article_id = request.args.get("article_id")
     if not article_id:
