@@ -11,11 +11,9 @@
             color: white;
             font-weight: bold;
         }
-
         .toggle-container {
             margin-top: 20px;
         }
-
         .toggle-btn {
             padding: 8px 16px;
             margin-right: 10px;
@@ -25,31 +23,32 @@
             font-weight: bold;
             border-radius: 4px;
         }
-
         .toggle-btn.active {
             background-color: #4CAF50;
             color: white;
         }
-
         .section {
             margin-top: 20px;
         }
-
         .event-section {
             margin-bottom: 20px;
             padding: 10px;
             border-radius: 6px;
         }
-
         .event-toggle {
             cursor: pointer;
             font-weight: bold;
             margin-bottom: 10px;
         }
-
         .event-details {
             display: none;
             margin-top: 10px;
+        }
+        .sentence-row {
+            margin-bottom: 6px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            cursor: pointer;
         }
     </style>
 
@@ -66,84 +65,129 @@
             const details = document.getElementById(id);
             details.style.display = details.style.display === 'none' ? 'block' : 'none';
         }
+
+        function highlightEventTypes(types) {
+            // Hide all event-details first
+            document.querySelectorAll('.event-details').forEach(d => d.style.display = 'none');
+
+            // Show only selected
+            types.forEach(type => {
+                const id = type;
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = 'block';
+                    el.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
     </script>
 </head>
 
 <body>
-    <h1>Article: {{ article_id }}</h1>
+<h1>Article: {{ article_id }}</h1>
 
-    <!-- Toggle Buttons -->
-    <div class="toggle-container">
-        <button id="nerBtn" class="toggle-btn active" onclick="toggleSection('nerBtn', 'ner')">NER</button>
-        <button id="depBtn" class="toggle-btn" onclick="toggleSection('depBtn', 'dep')">Dependency Parsing</button>
-        <button id="eventBtn" class="toggle-btn" onclick="toggleSection('eventBtn','events')">Events</button>
+
+<!-- Toggle Buttons -->
+<div class="toggle-container">
+    <button id="nerBtn" class="toggle-btn active" onclick="toggleSection('nerBtn', 'ner')">NER</button>
+    <button id="depBtn" class="toggle-btn" onclick="toggleSection('depBtn', 'dep')">Dependency Parsing</button>
+    <button id="eventBtn" class="toggle-btn" onclick="toggleSection('eventBtn','events')">Events</button>
+</div>
+
+<!-- NER Section -->
+<div id="ner" class="section" style="display: block;">
+    <div class="section">
+        {% for label in entity_map %}
+            <span class="tag" style="background-color: {{ color_map[label] }}">{{ label }}</span>
+        {% endfor %}
     </div>
+    {{ ner_html|safe }}
+</div>
 
-    <!-- NER Section -->
-    <div id="ner" class="section" style="display: block;">
-        <div class="section">
-            {% for label in entity_map %}
-                <span class="tag" style="background-color: {{ color_map[label] }}">{{ label }}</span>
+<!-- Events Section -->
+<div id="events" class="section" style="display: none;">
+    <div class="event-section" style="border: 2px solid #aaa;">
+        <h3>Associated Images</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            {% for img in image_filenames %}
+                <div style="border: 1px solid #ccc; padding: 6px;">
+                    <img src="{{ url_for('static', filename=img) }}" alt="Event Image" width="250">
+                    <p style="text-align: center;">{{ img.split('/')[-1] }}</p>
+                </div>
             {% endfor %}
         </div>
-        {{ ner_html|safe }}
-    </div>
 
-    <!-- Events Section -->
-    <div id="events" class="section" style="display: none;">
-        <div class="event-section" style="border: 2px solid #aaa;">
-            <h3>Event Types</h3>
-            {% for event_type, occurrences in events.items() %}
-                <div class="event-toggle" 
-                    onclick="toggleEventType('event_{{ loop.index }}')" 
-                    style="padding-left: 10px; cursor: pointer;">
-                    <strong style="color: {{ event_type_colors.get(event_type, '#000') }}">
-                         {{ event_type }}
-                    </strong>
-                </div>
-                <div id="event_{{ loop.index }}" class="event-details">
-                    <table border="1" cellpadding="6" cellspacing="0" style="margin-top: 10px; border-collapse: collapse; width: 100%;">
+        <h3>Event Types</h3>
+        {% for event_type, schema in event_schema.items() %}
+            {% set safe_id = event_type.replace(':', '_').replace(' ', '_') %}
+            <div class="event-toggle"
+                 data-event-type="{{ safe_id }}"
+                 onclick="toggleEventType('{{ safe_id }}')">
+                <strong style="color: {{ event_type_colors.get(event_type, '#000') }}">
+                    {{ event_type }}
+                </strong>
+            </div>
+            <div id="{{ safe_id }}" class="event-details">
+                {% if events.get(event_type) %}
+                    <table border="1" cellpadding="6" cellspacing="0"
+                           style="margin-top: 10px; border-collapse: collapse; width: 100%;">
                         <tr>
                             <th>Sentence ID</th>
                             <th>Trigger</th>
                             <th>Arguments</th>
                         </tr>
-                        {% for e in occurrences %}
-                        <tr>
-                            <td>{{ e.sentence_id }}</td>
-                            <td>{{ e.trigger }}</td>
-                            <td>
-                                {% for arg in e.arguments %}
-                                    <strong>{{ arg.role }}</strong>: {{ arg.text }}<br>
-                                {% endfor %}
-                            </td>
-                        </tr>
+                        {% for e in events[event_type] %}
+                            <tr>
+                                <td>{{ e.sentence_id }}</td>
+                                <td>{{ e.trigger }}</td>
+                                <td>
+                                    {% for arg in e.arguments %}
+                                        <strong>{{ arg.role }}</strong>: {{ arg.text }}<br>
+                                    {% endfor %}
+                                </td>
+                            </tr>
                         {% endfor %}
                     </table>
-                </div>
-            {% endfor %}
-        </div>
-    
-        <div style="margin-top: 20px;">
-            {% for label in event_map %}
-                <span class="tag" style="background-color: {{ color_map['EVENT'] }}">{{ label }}</span>
-            {% endfor %}
-        </div>
-        <div>{{ event_html|safe }}</div>
-    </div>
-
-    <!-- Dependency Parsing Section -->
-    <div id="dep" style="display: none;">
-        {% for dep, labels in zipped_deps %}
-            <div style="margin-bottom: 30px;">
-                <div style="margin-bottom: 5px;">
-                    {% for label in labels %}
-                        <span class="tag" style="background-color: #ddd; color: black;">{{ label }}</span>
-                    {% endfor %}
-                </div>
-                <div style="margin-bottom: 30px;">{{ dep|safe }}</div>
+                {% else %}
+                    <p><em>No instances of this event type in this article.</em></p>
+                {% endif %}
             </div>
         {% endfor %}
+        <!-- Sentence List -->
+         
+        <h3>Sentences</h3>
+        <div id="sentenceList" class="section">
+            {% for sent in sentences %}
+                {% set safe_types = sentence_event_map.get(sent.sentence_id, []) | map('replace', ':', '_') | map('replace', ' ', '_') | list %}
+                <div class="sentence-row"
+                    onclick="highlightEventTypes({{ safe_types | tojson }})">
+                    <strong>Sentence {{ sent.sentence_id.split('_')[-1] }}:</strong> {{ sent.sentence }}
+                </div>
+            {% endfor %}
+        </div>
     </div>
+
+    <!-- Event Tags 
+    <div style="margin-top: 20px;">
+        {% for label in events %}
+            <span class="tag" style="background-color: {{ color_map['EVENT'] }}">{{ label }}</span>
+        {% endfor %}
+    </div>
+    <div>{{ event_html|safe }}</div> -->
+</div>
+
+<!-- Dependency Parsing Section -->
+<div id="dep" style="display: none;">
+    {% for dep, labels in zipped_deps %}
+        <div style="margin-bottom: 30px;">
+            <div style="margin-bottom: 5px;">
+                {% for label in labels %}
+                    <span class="tag" style="background-color: #ddd; color: black;">{{ label }}</span>
+                {% endfor %}
+            </div>
+            <div style="margin-bottom: 30px;">{{ dep|safe }}</div>
+        </div>
+    {% endfor %}
+</div>
 </body>
 </html>
