@@ -1,193 +1,207 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ article_id }}</title>
-    <style>
-        .tag {
-            display: inline-block;
-            margin: 4px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-        }
-        .toggle-container {
-            margin-top: 20px;
-        }
-        .toggle-btn {
-            padding: 8px 16px;
-            margin-right: 10px;
-            cursor: pointer;
-            border: none;
-            background-color: #ddd;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-        .toggle-btn.active {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .section {
-            margin-top: 20px;
-        }
-        .event-section {
-            margin-bottom: 20px;
-            padding: 10px;
-            border-radius: 6px;
-        }
-        .event-toggle {
-            cursor: pointer;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .event-details {
-            display: none;
-            margin-top: 10px;
-        }
-        .sentence-row {
-            margin-bottom: 6px;
-            padding: 6px;
-            border: 1px solid #ccc;
-            cursor: pointer;
-        }
-    </style>
+  <title>{{ article_id }}</title>
+  <style>
+    .tag { display:inline-block; margin:4px; padding:4px 10px;
+           border-radius:4px; color:white; font-weight:bold;
+           cursor:pointer; }
+    .toggle-container { margin-top:20px; }
+    .toggle-btn {
+      padding:8px 16px; margin-right:10px;
+      cursor:pointer; border:none; background:#ddd;
+      font-weight:bold; border-radius:4px;
+    }
+    .toggle-btn.active { background:#4CAF50; color:white; }
+    .section { margin-top:20px; }
+    .images-grid {
+      display:flex; flex-wrap:wrap; gap:10px;
+    }
+    .images-grid div {
+      border:1px solid #ccc; padding:6px;
+    }
+    .images-grid img {
+      max-width:200px; display:block;
+    }
+    .event-item {
+      margin-bottom:10px;
+      border:1px solid #ccc;
+      border-radius:4px;
+      overflow:hidden;
+    }
+    .event-header {
+    margin: 0;
+    padding: 8px 12px;
+    background: white;           /* plain white */
+    border-left: 6px solid;      /* we’ll set the color inline */
+    color: inherit;              /* inline color will override */
+    cursor: pointer;
+    font-size: 1.1em;
+    }
 
-    <script>
-        function toggleSection(buttonId, sectionId) {
-            const section = document.getElementById(sectionId);
-            const button = document.getElementById(buttonId);
-            const isVisible = section.style.display === 'block';
-            section.style.display = isVisible ? 'none' : 'block';
-            button.classList.toggle('active', !isVisible);
-        }
-
-        function toggleEventType(id) {
-            const details = document.getElementById(id);
-            details.style.display = details.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function highlightEventTypes(types) {
-            // Hide all event-details first
-            document.querySelectorAll('.event-details').forEach(d => d.style.display = 'none');
-
-            // Show only selected
-            types.forEach(type => {
-                const id = type;
-                const el = document.getElementById(id);
-                if (el) {
-                    el.style.display = 'block';
-                    el.scrollIntoView({ behavior: 'smooth' });
-                }
-            });
-        }
-    </script>
+    .event-details {
+      display:none;
+      padding:10px;
+      background:#f9f9f9;
+    }
+    table {
+      width:100%;
+      border-collapse:collapse;
+      margin-bottom:10px;
+    }
+    table, th, td {
+      border:1px solid #aaa;
+    }
+    th, td {
+      padding:6px;
+      text-align:left;
+    }
+    .viewer-box {
+      margin:8px 0;
+      padding:8px;
+      border:1px solid #ccc;
+      background:white;
+    }
+  </style>
 </head>
-
 <body>
-<h1>Article: {{ article_id }}</h1>
+  <h1>Article: {{ article_id }}</h1>
 
+  <!-- Main toggles -->
+  <div class="toggle-container">
+    <button id="nerBtn"  class="toggle-btn active"
+            onclick="toggleSection('nerBtn','ner')">NER</button>
+    <button id="depBtn"  class="toggle-btn"
+            onclick="toggleSection('depBtn','dep')">Dependency</button>
+    <button id="eventBtn"class="toggle-btn"
+            onclick="toggleSection('eventBtn','events')">Events</button>
+  </div>
 
-<!-- Toggle Buttons -->
-<div class="toggle-container">
-    <button id="nerBtn" class="toggle-btn active" onclick="toggleSection('nerBtn', 'ner')">NER</button>
-    <button id="depBtn" class="toggle-btn" onclick="toggleSection('depBtn', 'dep')">Dependency Parsing</button>
-    <button id="eventBtn" class="toggle-btn" onclick="toggleSection('eventBtn','events')">Events</button>
-</div>
-
-<!-- NER Section -->
-<div id="ner" class="section" style="display: block;">
-    <div class="section">
-        {% for label in entity_map %}
-            <span class="tag" style="background-color: {{ color_map[label] }}">{{ label }}</span>
-        {% endfor %}
+  <!-- NER section -->
+  <div id="ner" class="section" style="display:block;">
+    <div>
+      {% for label in entity_map %}
+        <span class="tag" style="background-color:{{ color_map[label] }}">
+          {{ label }}
+        </span>
+      {% endfor %}
     </div>
     {{ ner_html|safe }}
-</div>
+  </div>
 
-<!-- Events Section -->
-<div id="events" class="section" style="display: none;">
-    <div class="event-section" style="border: 2px solid #aaa;">
-        <h3>Associated Images</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-            {% for img in image_filenames %}
-                <div style="border: 1px solid #ccc; padding: 6px;">
-                    <img src="{{ url_for('static', filename=img) }}" alt="Event Image" width="250">
-                    <p style="text-align: center;">{{ img.split('/')[-1] }}</p>
-                </div>
-            {% endfor %}
+  <!-- Dependency section -->
+  <div id="dep" class="section" style="display:none;">
+    {% for dep_html, labels in zipped_deps %}
+      <div style="margin-bottom:30px;">
+        <div style="margin-bottom:5px;">
+          {% for lab in labels %}
+            <span class="tag" style="background:#ddd; color:black;">
+              {{ lab }}
+            </span>
+          {% endfor %}
         </div>
-
-        <h3>Event Types</h3>
-        {% for event_type, schema in event_schema.items() %}
-            {% set safe_id = event_type.replace(':', '_').replace(' ', '_') %}
-            <div class="event-toggle"
-                 data-event-type="{{ safe_id }}"
-                 onclick="toggleEventType('{{ safe_id }}')">
-                <strong style="color: {{ event_type_colors.get(event_type, '#000') }}">
-                    {{ event_type }}
-                </strong>
-            </div>
-            <div id="{{ safe_id }}" class="event-details">
-                {% if events.get(event_type) %}
-                    <table border="1" cellpadding="6" cellspacing="0"
-                           style="margin-top: 10px; border-collapse: collapse; width: 100%;">
-                        <tr>
-                            <th>Sentence ID</th>
-                            <th>Trigger</th>
-                            <th>Arguments</th>
-                        </tr>
-                        {% for e in events[event_type] %}
-                            <tr>
-                                <td>{{ e.sentence_id }}</td>
-                                <td>{{ e.trigger }}</td>
-                                <td>
-                                    {% for arg in e.arguments %}
-                                        <strong>{{ arg.role }}</strong>: {{ arg.text }}<br>
-                                    {% endfor %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </table>
-                {% else %}
-                    <p><em>No instances of this event type in this article.</em></p>
-                {% endif %}
-            </div>
-        {% endfor %}
-        <!-- Sentence List -->
-         
-        <h3>Sentences</h3>
-        <div id="sentenceList" class="section">
-            {% for sent in sentences %}
-                {% set safe_types = sentence_event_map.get(sent.sentence_id, []) | map('replace', ':', '_') | map('replace', ' ', '_') | list %}
-                <div class="sentence-row"
-                    onclick="highlightEventTypes({{ safe_types | tojson }})">
-                    <strong>Sentence {{ sent.sentence_id.split('_')[-1] }}:</strong> {{ sent.sentence }}
-                </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Event Tags 
-    <div style="margin-top: 20px;">
-        {% for label in events %}
-            <span class="tag" style="background-color: {{ color_map['EVENT'] }}">{{ label }}</span>
-        {% endfor %}
-    </div>
-    <div>{{ event_html|safe }}</div> -->
-</div>
-
-<!-- Dependency Parsing Section -->
-<div id="dep" style="display: none;">
-    {% for dep, labels in zipped_deps %}
-        <div style="margin-bottom: 30px;">
-            <div style="margin-bottom: 5px;">
-                {% for label in labels %}
-                    <span class="tag" style="background-color: #ddd; color: black;">{{ label }}</span>
-                {% endfor %}
-            </div>
-            <div style="margin-bottom: 30px;">{{ dep|safe }}</div>
-        </div>
+        <div>{{ dep_html|safe }}</div>
+      </div>
     {% endfor %}
-</div>
+  </div>
+
+
+<!-- EVENTS -->
+    <div id="events" class="section" style="display:none;">
+
+    <!-- Associated Images -->
+    {% if image_filenames %}
+        <div style="border:2px solid #aaa; padding:10px; margin-bottom:20px;">
+        <h3>Associated Images</h3>
+        <div class="images-grid">
+            {% for img in image_filenames %}
+            <div>
+                <img src="{{ url_for('static', filename=img) }}" style="max-width:200px; display:block;">
+                <div style="text-align:center;">{{ img.split('/')[-1] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        </div>
+    {% endif %}
+
+    <!-- All event‐type headers -->
+    <div>
+        {% for et in event_types %}
+        {% set safe = et.replace(':','_').replace(' ','_') %}
+        <div class="event-item">
+            <h3 class="event-header"
+                style="
+                border-left-color: {{ event_type_colors.get(et,'#888') }};
+                color: {{ event_type_colors.get(et,'#888') }};
+                "
+                onclick="toggleEventType('{{ safe }}')">
+            {{ et }}
+            </h3>
+
+            <div id="{{ safe }}" class="event-details">
+            {% if events.get(et) %}
+                <table>
+                <tr><th>Sentence ID</th><th>Trigger</th><th>Arguments</th></tr>
+                {% for e in events[et] %}
+                    <tr>
+                    <td>{{ e.sentence_id }}</td>
+                    <td>{{ e.trigger }}</td>
+                    <td>
+                        {% for a in e.arguments %}
+                        <strong>{{ a.role }}</strong>: {{ a.text }}<br>
+                        {% endfor %}
+                    </td>
+                    </tr>
+                {% endfor %}
+                </table>
+
+                <div>
+                <strong>Sentences:</strong>
+                <div id="viewer_{{ safe }}" class="viewer-box">
+                    {{ sentence_event_map.get(et, [{'text':'No instances in this article.'}])[0].text }}
+                </div>
+                {% if sentence_event_map.get(et) %}
+                    <button onclick="nextSentence('{{ safe }}')">Next</button>
+                {% endif %}
+                </div>
+            {% else %}
+                <p><em>No instances of this event type in this article.</em></p>
+            {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    </div>
+
+
+  <script>
+    function toggleSection(btnId, secId) {
+      document.querySelectorAll('.toggle-btn')
+              .forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.section')
+              .forEach(s => s.style.display = 'none');
+      document.getElementById(btnId).classList.add('active');
+      document.getElementById(secId).style.display = 'block';
+    }
+
+    function toggleEventType(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
+
+    const sentenceMap = {{ sentence_event_map|tojson }};
+    let viewerState = {};
+    function nextSentence(safe) {
+      const raw = Object.keys(sentenceMap)
+                        .find(t => t.replace(/[: ]/g,'_') === safe);
+      if (!raw) return;
+      const arr = sentenceMap[raw];
+      viewerState[safe] = ((viewerState[safe] || 0) + 1) % arr.length;
+      document.getElementById(`viewer_${safe}`).innerText =
+        arr[viewerState[safe]].text;
+    }
+  </script>
 </body>
 </html>
