@@ -3,101 +3,108 @@
 <head>
   <title>{{ article_id }}</title>
   <style>
-    .tag { display:inline-block; margin:4px; padding:4px 10px;
-           border-radius:4px; color:white; font-weight:bold;
-           cursor:pointer; }
-    .toggle-container { margin-top:20px; }
-    .toggle-btn {
-      padding:8px 16px; margin-right:10px;
-      cursor:pointer; border:none; background:#ddd;
-      font-weight:bold; border-radius:4px;
-    }
-    .toggle-btn.active { background:#4CAF50; color:white; }
-    .section { margin-top:20px; }
-    .images-grid {
-      display:flex; flex-wrap:wrap; gap:10px;
-    }
-    .images-grid div {
-      border:1px solid #ccc; padding:6px;
-    }
-    .images-grid img {
-      max-width:200px; display:block;
-    }
-    .event-item {
-      margin-bottom:10px;
-      border:1px solid #ccc;
-      border-radius:4px;
-      overflow:hidden;
-    }
-    .event-header {
-    margin: 0;
-    padding: 8px 12px;
-    background: white;           /* plain white */
-    border-left: 6px solid;      /* we’ll set the color inline */
-    color: inherit;              /* inline color will override */
-    cursor: pointer;
-    font-size: 1.1em;
-    }
+    :root { --box-border:#e5e7eb; --box-bg:#fff; --muted:#6b7280; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; }
+    .tag { display:inline-block; margin:4px; padding:4px 10px; border-radius:12px; color:#111; }
 
-    .event-details {
-      display:none;
-      padding:10px;
-      background:#f9f9f9;
+    /* Top toggle bar */
+    .toggle-container{
+      position: sticky; top: 0; z-index: 1000;
+      background:#fff; padding:12px; border-bottom:1px solid var(--box-border);
+      display:flex; gap:8px;
     }
-    table {
+    .toggle-btn{padding:8px 16px; cursor:pointer; border:1px solid var(--box-border);
+      background:#f9fafb; font-weight:600; border-radius:8px;}
+    .toggle-btn.active{background:#111; color:#fff; border-color:#111;}
+    .section{padding:16px;}
+
+    /* NER/DEP visuals */
+    .images-grid{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;}
+    .images-grid div{border:1px solid var(--box-border); padding:6px; border-radius:8px;}
+    .images-grid img{max-width:180px; display:block; border-radius:4px;}
+    .ner-wrap, .dep-wrap svg { max-width: 100%; }
+
+    /* EVENTS: three-pane layout */
+    .events-3col{
+      display:grid;
+      grid-template-columns: 1.4fr 1.0fr 1.8fr; /* image • types • sentences */
+      gap:16px;
+      align-items:start;
+    }
+    .pane{
+      background:var(--box-bg);
+      border:1px solid var(--box-border);
+      border-radius:12px;
+      padding:12px;
+      min-height:220px;
+    }
+    .muted{color:var(--muted);}
+
+    /* Left pane: image viewer */
+    .img-wrap{position:relative; width:100%;}
+    .img-wrap img{display:block; width:100%; height:auto; border-radius:8px;}
+    .img-wrap canvas{position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none;}
+    .img-controls{display:flex; gap:8px; margin:8px 0;}
+    .btn{padding:8px 12px; border:1px solid var(--box-border); background:#fff; border-radius:8px; cursor:pointer;}
+    .btn[disabled]{opacity:.5; cursor:not-allowed;}
+    table{width:100%; border-collapse:collapse; margin-top:8px; font-size:.9em;}
+    th, td{border:1px solid var(--box-border); padding:6px; text-align:left;}
+
+    /* Middle pane: event types list with colored border */
+    .side-item{
       width:100%;
-      border-collapse:collapse;
-      margin-bottom:10px;
-    }
-    table, th, td {
-      border:1px solid #aaa;
-    }
-    th, td {
-      padding:6px;
       text-align:left;
+      border:2px solid var(--et-color,#111);
+      background:#fff;
+      border-radius:10px;
+      padding:10px 12px;
+      margin-bottom:10px;
+      cursor:pointer;
+      display:flex; justify-content:space-between; align-items:center;
+      transition:background .15s, box-shadow .15s, border-color .15s;
+      color:#111;
     }
-    .viewer-box {
-      margin:8px 0;
-      padding:8px;
-      border:1px solid #ccc;
-      background:white;
-    }
+    .side-item:hover{background:#f9fafb;}
+    .side-item.active{background:#f3f4f6; box-shadow:0 0 0 2px rgba(0,0,0,0.03) inset;}
+    .badge{font-size:.85em; background:transparent; color:var(--et-color,#111); border:1px solid var(--et-color,#111); border-radius:999px; padding:2px 8px;}
+
+    /* Right pane: sentence viewer */
+    .viewer-box{border:1px solid var(--box-border); border-radius:8px; padding:12px; background:#fff; min-height:80px;}
+    .meta-box{border:1px solid var(--box-border); border-radius:8px; padding:12px; background:#fff; margin-top:10px;}
+    .meta-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:6px; font-size:.95em;}
+    .meta-label{min-width:110px; color:#374151; font-weight:600;}
+    .args{line-height:1.4;}
+    .controls{margin-top:10px; display:flex; gap:8px; align-items:center;}
+    .counter{font-size:.9em; color:var(--muted);}
   </style>
 </head>
 <body>
-  <h1>Article: {{ article_id }}</h1>
+  <h1 style="padding:16px 16px 0 16px; margin:0;">Article: {{ article_id }}</h1>
 
-  <!-- Main toggles -->
+  <!-- Top toggles -->
   <div class="toggle-container">
-    <button id="nerBtn"  class="toggle-btn active"
-            onclick="toggleSection('nerBtn','ner')">NER</button>
-    <button id="depBtn"  class="toggle-btn"
-            onclick="toggleSection('depBtn','dep')">Dependency</button>
-    <button id="eventBtn"class="toggle-btn"
-            onclick="toggleSection('eventBtn','events')">Events</button>
+    <button id="nerBtn"  class="toggle-btn active" onclick="toggleSection('nerBtn','ner')">NER</button>
+    <button id="depBtn"  class="toggle-btn"        onclick="toggleSection('depBtn','dep')">Dependency</button>
+    <button id="eventBtn"class="toggle-btn"        onclick="toggleSection('eventBtn','events')">Events</button>
   </div>
 
-  <!-- NER section -->
+  <!-- NER -->
   <div id="ner" class="section" style="display:block;">
-    <div>
+    <div style="margin-bottom:8px;">
       {% for label in entity_map %}
-        <span class="tag" style="background-color:{{ color_map[label] }}">
-          {{ label }}
-        </span>
+        <span class="tag" style="background-color: {{ color_map.get(label, '#f3f4f6') }};">{{ label }}</span>
       {% endfor %}
     </div>
-    {{ ner_html|safe }}
+    <div class="ner-wrap">{{ ner_html|safe }}</div>
   </div>
 
-  <!-- Dependency section -->
+  <!-- Dependency -->
   <div id="dep" class="section" style="display:none;">
     {% for dep_html, labels in zipped_deps %}
-      <div style="margin-bottom:30px;">
-        <div style="margin-bottom:5px;">
+      <div class="dep-wrap" style="margin-bottom:24px;">
+        <div style="margin-bottom:6px;">
           {% for lab in labels %}
-            <span class="tag" style="background:#ddd; color:black;">
-              {{ lab }}
-            </span>
+            <span class="tag" style="background:#f3f4f6;">{{ lab }}</span>
           {% endfor %}
         </div>
         <div>{{ dep_html|safe }}</div>
@@ -105,102 +112,283 @@
     {% endfor %}
   </div>
 
+  <!-- Events -->
+  <div id="events" class="section" style="display:none;">
+    <div class="events-3col">
 
-<!-- EVENTS -->
-    <div id="events" class="section" style="display:none;">
+      <!-- LEFT: image viewer (updated by selected event type) -->
+      <div class="pane">
+        <div class="muted" style="margin-bottom:8px; font-weight:600;">Images</div>
+        <div id="imgPlaceholder" class="muted">Select an event type to view its images.</div>
 
-    <!-- Associated Images -->
-    {% if image_filenames %}
-        <div style="border:2px solid #aaa; padding:10px; margin-bottom:20px;">
-        <h3>Associated Images</h3>
-        <div class="images-grid">
-            {% for img in image_filenames %}
-            <div>
-                <img src="{{ url_for('static', filename=img) }}" style="max-width:200px; display:block;">
-                <div style="text-align:center;">{{ img.split('/')[-1] }}</div>
-            </div>
-            {% endfor %}
+        <div id="imgViewer" style="display:none;">
+          <div class="img-wrap">
+            <img id="imgEl" src="" alt="">
+            <canvas id="imgCanvas"></canvas>
+          </div>
+          <div class="img-controls">
+            <button id="prevImg" class="btn" onclick="prevImage()">Prev</button>
+            <button id="nextImg" class="btn" onclick="nextImage()">Next</button>
+            <span id="imgCounter" class="muted"></span>
+          </div>
+
+          <table id="bboxTable"></table>
         </div>
+      </div>
+
+      <!-- MIDDLE: event types (present in article) -->
+      <div class="pane">
+        <div class="muted" style="margin-bottom:8px; font-weight:600;">Event types in this article</div>
+        {% set types_list = present_event_types if present_event_types is defined else event_sentence_map.keys() %}
+        {% if types_list|length == 0 %}
+          <div class="muted">No event types found.</div>
+        {% else %}
+          {% for et in types_list %}
+            {% set safe = et.replace(':','_').replace(' ','_') %}
+            {% set s_count = (event_sentence_map.get(et) or [])|length %}
+            {% set i_count = (image_by_type.get(et) or [])|length %}
+            <button
+              id="side_{{ safe }}"
+              class="side-item"
+              style="--et-color: {{ event_type_colors.get(et, '#111') }};"
+              onclick="selectEventType('{{ safe }}')">
+              <span>{{ et }}</span>
+              <span class="badge">{{ s_count }}{{ ' • ' if i_count else '' }}{% if i_count %}{{ i_count }} img{% endif %}</span>
+            </button>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- RIGHT: sentence viewer + meta -->
+      <div class="pane">
+        <div id="selectedTitle" class="muted">Select an event type</div>
+
+        <!-- Sentence text -->
+        <div id="viewer" class="viewer-box" style="display:none;"></div>
+
+        <!-- Per-sentence meta -->
+        <div id="meta" class="meta-box" style="display:none;">
+          <div class="meta-row"><div class="meta-label">Sentence ID</div><div id="metaId"></div></div>
+          <div class="meta-row"><div class="meta-label">Trigger</div><div id="metaTrigger"></div></div>
+          <div class="meta-row"><div class="meta-label">Arguments</div><div id="metaArgs" class="args"></div></div>
         </div>
-    {% endif %}
 
-    <!-- All event‐type headers -->
-    <div>
-        {% for et in event_types %}
-        {% set safe = et.replace(':','_').replace(' ','_') %}
-        <div class="event-item">
-            <h3 class="event-header"
-                style="
-                border-left-color: {{ event_type_colors.get(et,'#888') }};
-                color: {{ event_type_colors.get(et,'#888') }};
-                "
-                onclick="toggleEventType('{{ safe }}')">
-            {{ et }}
-            </h3>
-
-            <div id="{{ safe }}" class="event-details">
-            {% if events.get(et) %}
-                <table>
-                <tr><th>Sentence ID</th><th>Trigger</th><th>Arguments</th></tr>
-                {% for e in events[et] %}
-                    <tr>
-                    <td>{{ e.sentence_id }}</td>
-                    <td>{{ e.trigger }}</td>
-                    <td>
-                        {% for a in e.arguments %}
-                        <strong>{{ a.role }}</strong>: {{ a.text }}<br>
-                        {% endfor %}
-                    </td>
-                    </tr>
-                {% endfor %}
-                </table>
-
-                <div>
-                <strong>Sentences:</strong>
-                <div id="viewer_{{ safe }}" class="viewer-box">
-                    {{ sentence_event_map.get(et, [{'text':'No instances in this article.'}])[0].text }}
-                </div>
-                {% if sentence_event_map.get(et) %}
-                    <button onclick="nextSentence('{{ safe }}')">Next</button>
-                {% endif %}
-                </div>
-            {% else %}
-                <p><em>No instances of this event type in this article.</em></p>
-            {% endif %}
-            </div>
+        <!-- Controls -->
+        <div class="controls">
+          <button id="nextBtn" class="btn" onclick="nextSentence()" disabled>Next</button>
+          <span id="counter" class="counter"></span>
         </div>
-        {% endfor %}
+      </div>
+
     </div>
-
-    </div>
-
+  </div>
 
   <script>
-    function toggleSection(btnId, secId) {
-      document.querySelectorAll('.toggle-btn')
-              .forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.section')
-              .forEach(s => s.style.display = 'none');
+    // Toggle sections
+    function toggleSection(btnId, secId){
+      document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.style.display='none');
       document.getElementById(btnId).classList.add('active');
-      document.getElementById(secId).style.display = 'block';
+      document.getElementById(secId).style.display='block';
     }
 
-    function toggleEventType(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    // ----- Data from server -----
+    const sentenceMap = {{ event_sentence_map | tojson }};  // { Type: [{text}] }
+    const eventsDict  = {{ events | tojson }};              // { Type: [{sentence_id, trigger, arguments}] }
+    const imageByType = {{ image_by_type | tojson }};       // { Type: [{id, url, event_type, boxes:[...]}] }
+
+    // ----- State -----
+    let selectedRaw = null;
+    let idxByType = {};     // sentence index per type
+    let imgIdxByType = {};  // image index per type
+
+    function safeToRaw(safe){
+      return Object.keys(sentenceMap).find(t => t.replace(/[: ]/g,'_') === safe)
+             || Object.keys(imageByType).find(t => t.replace(/[: ]/g,'_') === safe)
+             || null;
     }
 
-    const sentenceMap = {{ sentence_event_map|tojson }};
-    let viewerState = {};
-    function nextSentence(safe) {
-      const raw = Object.keys(sentenceMap)
-                        .find(t => t.replace(/[: ]/g,'_') === safe);
-      if (!raw) return;
-      const arr = sentenceMap[raw];
-      viewerState[safe] = ((viewerState[safe] || 0) + 1) % arr.length;
-      document.getElementById(`viewer_${safe}`).innerText =
-        arr[viewerState[safe]].text;
+    function selectEventType(safe){
+      // highlight
+      document.querySelectorAll('.side-item').forEach(el=>el.classList.remove('active'));
+      const btn = document.getElementById('side_'+safe);
+      if (btn) btn.classList.add('active');
+
+      selectedRaw = safeToRaw(safe);
+      if (!(selectedRaw in idxByType)) idxByType[selectedRaw] = 0;
+      if (!(selectedRaw in imgIdxByType)) imgIdxByType[selectedRaw] = 0;
+
+      renderSentence();
+      renderImage();
+    }
+
+    // ----- Sentence viewer -----
+    function nextSentence(){
+      if (!selectedRaw) return;
+      const arr = sentenceMap[selectedRaw] || [];
+      if (!arr.length) return;
+      idxByType[selectedRaw] = (idxByType[selectedRaw] + 1) % arr.length;
+      renderSentence();
+    }
+
+    function renderSentence(){
+      const titleEl = document.getElementById('selectedTitle');
+      const viewer  = document.getElementById('viewer');
+      const metaBox = document.getElementById('meta');
+      const nextBtn = document.getElementById('nextBtn');
+      const counter = document.getElementById('counter');
+
+      if (!selectedRaw){
+        titleEl.textContent = 'Select an event type from the middle list.';
+        viewer.style.display='none'; metaBox.style.display='none';
+        nextBtn.disabled = true; counter.textContent = ''; return;
+      }
+
+      const texts = sentenceMap[selectedRaw] || [];
+      const evs   = eventsDict[selectedRaw] || [];
+      const total = texts.length;
+
+      titleEl.textContent = selectedRaw;
+
+      if (total === 0){
+        viewer.style.display='none'; metaBox.style.display='none';
+        nextBtn.disabled = true; counter.textContent = '0 / 0'; return;
+      }
+
+      const i = idxByType[selectedRaw] || 0;
+      const t = texts[i];
+
+      viewer.style.display='block';
+      viewer.textContent = t.text;
+
+      const ev = evs[i] || {};
+      document.getElementById('metaId').textContent = ev.sentence_id || '—';
+      document.getElementById('metaTrigger').textContent = ev.trigger || '—';
+      const argsHtml = (ev.arguments || []).map(a => `<strong>${a.role}</strong>: ${a.text}`).join('<br>') || '—';
+      document.getElementById('metaArgs').innerHTML = argsHtml;
+      metaBox.style.display='block';
+
+      nextBtn.disabled = total <= 1;
+      counter.textContent = `${i+1} / ${total}`;
+    }
+
+    // ----- Image viewer with bounding boxes -----
+    function prevImage(){ shiftImage(-1); }
+    function nextImage(){ shiftImage(+1); }
+    function shiftImage(delta){
+      if (!selectedRaw) return;
+      const imgs = imageByType[selectedRaw] || [];
+      if (!imgs.length) return;
+      const n = imgs.length;
+      imgIdxByType[selectedRaw] = (imgIdxByType[selectedRaw] + delta + n) % n;
+      renderImage();
+    }
+
+    function renderImage(){
+      const placeholder = document.getElementById('imgPlaceholder');
+      const viewer = document.getElementById('imgViewer');
+      const imgEl = document.getElementById('imgEl');
+      const canvas = document.getElementById('imgCanvas');
+      const counter = document.getElementById('imgCounter');
+      const table = document.getElementById('bboxTable');
+      const prevBtn = document.getElementById('prevImg');
+      const nextBtn = document.getElementById('nextImg');
+
+      // images for the currently selected event type
+      const imgs = selectedRaw ? (imageByType[selectedRaw] || []) : [];
+
+      // No selection yet
+      if (!selectedRaw) {
+        placeholder.textContent = 'Select an event type to view its images.';
+        placeholder.style.display = 'block';
+        viewer.style.display = 'none';
+        return;
+      }
+
+      // Selected, but no images for this type
+      if (imgs.length === 0) {
+        placeholder.textContent = 'No images for this event type.';
+        placeholder.style.display = 'block';
+        viewer.style.display = 'none';
+        // also clear any stale table/counter
+        table.innerHTML = '';
+        counter.textContent = '';
+        return;
+      }
+
+      // We have images → show viewer
+      const i = imgIdxByType[selectedRaw] || 0;
+      const item = imgs[i];
+
+      placeholder.style.display = 'none';
+      viewer.style.display = 'block';
+
+      // load image and draw boxes after load
+      imgEl.onload = () => drawBoxes(imgEl, canvas, item.boxes || []);
+      imgEl.src = item.url;
+
+      // counter & nav
+      counter.textContent = `${i+1} / ${imgs.length}`;
+      prevBtn.disabled = imgs.length <= 1;
+      nextBtn.disabled = imgs.length <= 1;
+
+      // table of boxes
+      if ((item.boxes || []).length){
+        const rows = ['<tr><th>Role</th><th>x1,y1</th><th>x2,y2</th></tr>'];
+        for (const b of item.boxes){
+          rows.push(`<tr>
+            <td>${b.role || ''}</td>
+            <td>${b.x1}, ${b.y1}</td>
+            <td>${b.x2}, ${b.y2}</td>
+          </tr>`);
+        }
+        table.innerHTML = rows.join('');
+      } else {
+        table.innerHTML = '<tr><td class="muted">No boxes</td></tr>';
+      }
+    }
+
+
+
+    function roleColor(role){
+      const map = {
+        "Entity":"#e11d48", "Person":"#e11d48",
+        "Police":"#2563eb", "Instrument":"#f59e0b",
+        "Vehicle":"#10b981", "Object":"#8b5cf6"
+      };
+      return map[role] || "#ef4444";
+    }
+
+    function drawBoxes(imgEl, canvas, boxes){
+      // size canvas to rendered image
+      const w = imgEl.clientWidth, h = imgEl.clientHeight;
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+
+      if (!boxes || !boxes.length || !imgEl.naturalWidth || !imgEl.naturalHeight) return;
+
+      const sx = w / imgEl.naturalWidth;
+      const sy = h / imgEl.naturalHeight;
+
+      for (const b of boxes){
+        const x = b.x1 * sx, y = b.y1 * sy;
+        const bw = (b.x2 - b.x1) * sx, bh = (b.y2 - b.y1) * sy;
+        const color = roleColor(b.role);
+
+        ctx.lineWidth = 2; ctx.strokeStyle = color;
+        ctx.strokeRect(x, y, bw, bh);
+
+        ctx.save(); ctx.globalAlpha = 0.12; ctx.fillStyle = color;
+        ctx.fillRect(x, y, bw, bh); ctx.restore();
+
+        const label = `${b.role || ''}`;
+        ctx.font = '12px sans-serif';
+        const pad = 4, lh = 16, lw = ctx.measureText(label).width + pad*2;
+        const ly = Math.max(0, y - lh);
+        ctx.fillStyle = color; ctx.fillRect(x, ly, lw, lh);
+        ctx.fillStyle = '#fff'; ctx.fillText(label, x + pad, ly + 12);
+      }
     }
   </script>
 </body>
